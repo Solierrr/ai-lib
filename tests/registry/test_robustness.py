@@ -38,10 +38,12 @@ def test_report_ignores_non_finite_retry_after(value):
     ],
 )
 def test_invalid_lease_body_is_a_registry_error(response):
+    client = make_client(lambda request: response)
     with pytest.raises(RegistryError):
-        make_client(lambda request: response).lease()
+        client.lease()
 
 
 async def test_invalid_lease_body_is_a_registry_error_async():
+    client = make_client(lambda request: httpx.Response(200, content=b"nope"))
     with pytest.raises(RegistryError):
-        await make_client(lambda request: httpx.Response(200, content=b"nope")).alease()
+        await client.alease()

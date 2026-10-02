@@ -79,22 +79,25 @@ def test_lease_repr_hides_secret():
 def test_auth_failure_is_immediate(status):
     script = Script(httpx.Response(status))
     sleeps: list[float] = []
+    client = make_client(script, sleeps)
     with pytest.raises(RegistryAuthError):
-        make_client(script, sleeps).lease()
+        client.lease()
     assert len(script.requests) == 1
     assert sleeps == []
 
 
 def test_not_configured_is_immediate():
     script = Script(httpx.Response(404, json={"code": "x"}))
+    client = make_client(script, [])
     with pytest.raises(RegistryKeysNotConfigured):
-        make_client(script, []).lease()
+        client.lease()
     assert len(script.requests) == 1
 
 
 def test_unexpected_client_error_is_immediate():
+    client = make_client(Script(httpx.Response(422)), [])
     with pytest.raises(RegistryError):
-        make_client(Script(httpx.Response(422)), []).lease()
+        client.lease()
 
 
 def test_503_without_retry_after_backs_off_then_succeeds():
@@ -109,8 +112,9 @@ def test_503_without_retry_after_gives_up_after_max_attempts():
     script = Script(*[httpx.Response(503) for _ in range(3)])
     sleeps: list[float] = []
 
+    client = make_client(script, sleeps)
     with pytest.raises(RegistryKeysUnavailable):
-        make_client(script, sleeps).lease()
+        client.lease()
     assert len(script.requests) == 3
     assert sleeps == [1.0, 2.0]
 
@@ -136,8 +140,9 @@ def test_second_503_with_retry_after_raises_with_hint():
         httpx.Response(503, headers={"Retry-After": "5"}),
         httpx.Response(503, headers={"Retry-After": "9"}),
     )
+    client = make_client(script, [])
     with pytest.raises(RegistryKeysUnavailable) as raised:
-        make_client(script, []).lease()
+        client.lease()
     assert raised.value.retry_after == 9.0
 
 
@@ -146,8 +151,9 @@ def test_transport_errors_retry_then_raise_unreachable():
     script = Script(error, error, error)
     sleeps: list[float] = []
 
+    client = make_client(script, sleeps)
     with pytest.raises(RegistryUnreachable):
-        make_client(script, sleeps).lease()
+        client.lease()
     assert sleeps == [1.0, 2.0]
 
 
@@ -161,8 +167,9 @@ def test_cold_start_timeout_then_success():
 
 def test_total_budget_stops_retries():
     script = Script(httpx.Response(503), httpx.Response(503))
+    client = make_client(script, [], max_total_seconds=0.5)
     with pytest.raises(RegistryKeysUnavailable):
-        make_client(script, [], max_total_seconds=0.5).lease()
+        client.lease()
     assert len(script.requests) == 1
 
 
@@ -198,8 +205,9 @@ async def test_alease_retries_and_succeeds():
 
 
 async def test_alease_auth_failure():
+    client = make_client(Script(httpx.Response(401)), [])
     with pytest.raises(RegistryAuthError):
-        await make_client(Script(httpx.Response(401)), []).alease()
+        await client.alease()
 
 
 async def test_areport_never_raises():

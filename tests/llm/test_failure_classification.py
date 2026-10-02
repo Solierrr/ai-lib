@@ -34,7 +34,8 @@ def test_numbers_in_messages_are_not_rate_limits(message):
 )
 def test_rate_limit_signals(error):
     failure = classify_key_failure(error)
-    assert failure is not None and failure.outcome == "rate_limited"
+    assert failure is not None
+    assert failure.outcome == "rate_limited"
 
 
 @pytest.mark.parametrize(
@@ -47,7 +48,8 @@ def test_rate_limit_signals(error):
 )
 def test_invalid_key_signals(error):
     failure = classify_key_failure(error)
-    assert failure is not None and failure.outcome == "invalid"
+    assert failure is not None
+    assert failure.outcome == "invalid"
 
 
 def test_forbidden_is_not_blamed_on_the_key():
@@ -63,7 +65,8 @@ def test_non_numeric_retry_after_is_ignored():
         response = Response()
 
     failure = classify_key_failure(Limited("quota"))
-    assert failure is not None and failure.retry_after is None
+    assert failure is not None
+    assert failure.retry_after is None
 
 
 def test_provider_sdks_do_not_retry_with_the_same_key_for_long():

@@ -118,16 +118,18 @@ def test_exhausted_keys_raise_registry_error(fake_builders):
     fake_builders["bad"].update({"secret-a", "secret-b"})
     registry = FakeRegistry({"gemini": ["a", "b"]})
 
+    model = get_chat_model("gemini", client=registry)
     with pytest.raises(RegistryKeysUnavailable):
-        get_chat_model("gemini", client=registry).invoke("hi")
+        model.invoke("hi")
 
 
 def test_max_key_attempts_reraises_last_provider_error(fake_builders):
     fake_builders["bad"].update({"secret-a", "secret-b"})
     registry = FakeRegistry({"gemini": ["a", "b", "c"]})
 
+    model = get_chat_model("gemini", client=registry, max_key_attempts=2)
     with pytest.raises(RateLimited):
-        get_chat_model("gemini", client=registry, max_key_attempts=2).invoke("hi")
+        model.invoke("hi")
     assert [r[1] for r in registry.reports] == ["rate_limited", "rate_limited"]
 
 
@@ -138,8 +140,9 @@ def test_unrelated_errors_propagate_without_report(monkeypatch):
     monkeypatch.setitem(chat_module.BUILDERS, "groq", builder)
     registry = FakeRegistry({"groq": ["g"]})
 
+    model = get_chat_model("groq", client=registry)
     with pytest.raises(ValueError):
-        get_chat_model("groq", client=registry).invoke("hi")
+        model.invoke("hi")
     assert registry.reports == []
 
 
@@ -257,4 +260,6 @@ def test_classify_follows_the_cause_chain_and_reads_retry_after():
     except RuntimeError as wrapped:
         failure = classify_key_failure(wrapped)
 
-    assert failure and failure.outcome == "rate_limited" and failure.retry_after == 12.0
+    assert failure is not None
+    assert failure.outcome == "rate_limited"
+    assert failure.retry_after == 12.0
