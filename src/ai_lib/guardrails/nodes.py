@@ -1,5 +1,5 @@
 import logging
-from collections.abc import Callable, Collection
+from collections.abc import Callable, Collection, Mapping
 from typing import Any
 
 from langchain_core.language_models import BaseChatModel
@@ -63,12 +63,16 @@ def make_input_guardrail_node(
     llm: LlmSource = None,
     blocked_response: str = DEFAULT_INPUT_BLOCKED,
     valid_categories: Collection[str] = INPUT_CATEGORIES,
+    blocked_responses: Mapping[str, str] | None = None,
+    extra_context: Callable[[GuardrailState], str] | None = None,
 ) -> Callable[..., dict]:
+    responses = blocked_responses or {}
+
     def blocked_result(state: GuardrailState, category: str, pii_map: dict | None = None) -> dict:
         return {
             "messages": [
                 RemoveMessage(id=state["messages"][-1].id),
-                AIMessage(content=blocked_response),
+                AIMessage(content=responses.get(category, blocked_response)),
             ],
             "route": "end",
             "pii_map": pii_map or {},
@@ -85,6 +89,9 @@ def make_input_guardrail_node(
 
         anonymized_text, pii_map = anonymize_text(last_message)
         formatted_prompt = prompt.replace(INPUT_PLACEHOLDER, anonymized_text)
+        extra = extra_context(state) if extra_context is not None else ""
+        if extra:
+            formatted_prompt = f"{formatted_prompt}\n{extra}"
 
         try:
             response = _resolve_llm(llm).invoke(
