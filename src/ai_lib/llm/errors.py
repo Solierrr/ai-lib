@@ -2,8 +2,14 @@ from dataclasses import dataclass
 
 from ai_lib.registry.schemas import Outcome
 
-RATE_LIMIT_MARKERS = ("resource_exhausted", "rate limit", "rate_limit", "too many requests", "429")
-INVALID_KEY_MARKERS = ("api_key_invalid", "api key not valid", "invalid api key", "invalid_api_key")
+RATE_LIMIT_MARKERS = ("resource_exhausted", "rate limit", "rate_limit", "too many requests")
+INVALID_KEY_MARKERS = (
+    "api_key_invalid",
+    "api key not valid",
+    "invalid api key",
+    "invalid_api_key",
+    "reported as leaked",
+)
 MAX_CAUSE_DEPTH = 5
 
 
@@ -28,10 +34,12 @@ def _retry_after_of(error: BaseException) -> float | None:
     headers = getattr(getattr(error, "response", None), "headers", None)
     if headers is None:
         return None
+    raw = headers.get("retry-after")
+    if raw is None:
+        return None
     try:
-        raw = headers.get("retry-after")
-        return float(raw) if raw is not None else None
-    except TypeError, ValueError:
+        return float(raw)
+    except ValueError:
         return None
 
 
@@ -47,6 +55,6 @@ def classify_key_failure(error: BaseException) -> KeyFailure | None:
         text = str(candidate).lower()
         if status == 429 or any(marker in text for marker in RATE_LIMIT_MARKERS):
             return KeyFailure("rate_limited", _retry_after_of(candidate))
-        if status in (401, 403) or any(marker in text for marker in INVALID_KEY_MARKERS):
+        if status == 401 or any(marker in text for marker in INVALID_KEY_MARKERS):
             return KeyFailure("invalid")
     return None

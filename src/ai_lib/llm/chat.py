@@ -21,14 +21,22 @@ def _build_gemini(lease: KeyLease, model: str, temperature: float, kwargs: dict)
     from langchain_google_genai import ChatGoogleGenerativeAI
 
     return ChatGoogleGenerativeAI(
-        model=model, temperature=temperature, api_key=lease.api_key, **kwargs
+        model=model,
+        temperature=temperature,
+        api_key=lease.api_key,
+        **{"max_retries": 1, **kwargs},
     )
 
 
 def _build_groq(lease: KeyLease, model: str, temperature: float, kwargs: dict) -> Any:
     from langchain_groq import ChatGroq
 
-    return ChatGroq(model=model, temperature=temperature, api_key=lease.api_key, **kwargs)
+    return ChatGroq(
+        model=model,
+        temperature=temperature,
+        api_key=lease.api_key,
+        **{"max_retries": 0, **kwargs},
+    )
 
 
 BUILDERS: dict[str, Callable[[KeyLease, str, float, dict], Any]] = {
