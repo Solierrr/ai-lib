@@ -79,7 +79,7 @@ def make_input_guardrail_node(
             "turn_agents": [f"input_guardrail_blocked_{category.lower()}"],
         }
 
-    def input_guardrail_node(state: GuardrailState, config: Any = None) -> dict:
+    def input_guardrail_node(state: Any, config: Any = None) -> dict:
         last_message = state["messages"][-1].content
 
         if matches_injection_pattern(last_message):
@@ -125,7 +125,7 @@ def make_output_guardrail_node(
     fallback_response: str = DEFAULT_OUTPUT_FALLBACK,
     specialists: Collection[str] = (),
 ) -> Callable[..., dict]:
-    def output_guardrail_node(state: GuardrailState, config: Any = None) -> dict:
+    def output_guardrail_node(state: Any, config: Any = None) -> dict:
         last_message_text = state["messages"][-1].content
         formatted_prompt = (
             prompt.replace(OUTPUT_PLACEHOLDER, last_message_text) + OUTPUT_FORMAT_INSTRUCTION
@@ -168,7 +168,7 @@ def make_judge_node(
     max_retries: int = 1,
     extra_context: Callable[[GuardrailState], str] | None = None,
 ) -> Callable[..., dict]:
-    def judge_node(state: GuardrailState, config: Any = None) -> dict:
+    def judge_node(state: Any, config: Any = None) -> dict:
         last_message = state["messages"][-1].content
         audited = f"Resposta a ser auditada:\n\n{last_message}"
         if extra_context is not None:

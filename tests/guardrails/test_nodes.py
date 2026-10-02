@@ -198,3 +198,33 @@ def test_prompts_are_free_of_unfilled_placeholders():
     assert "{scope}" not in INPUT_PROMPT + OUTPUT_PROMPT + JUDGE_PROMPT
     assert "{mensagem}" in INPUT_PROMPT
     assert "{resposta}" in OUTPUT_PROMPT
+
+
+def test_nodes_inside_a_graph_see_the_full_service_state():
+    from langgraph.graph import END, START, MessagesState, StateGraph
+
+    class ServiceState(MessagesState):
+        route: str
+        turn_agents: list
+        pii_map: dict
+        trip_request: dict
+
+    seen = {}
+
+    def context(graph_state):
+        seen["trip_request"] = graph_state.get("trip_request")
+        return "viagem pendente"
+
+    llm = FakeListChatModel(responses=["CATEGORIA: APROVADO" + chr(10) + "JUSTIFICATIVA: ok"])
+    node = make_input_guardrail_node(prompt=INPUT_PROMPT, llm=llm, extra_context=context)
+    graph = StateGraph(ServiceState)
+    graph.add_node("input_guardrail", node)
+    graph.add_edge(START, "input_guardrail")
+    graph.add_edge("input_guardrail", END)
+
+    result = graph.compile().invoke(
+        {"messages": [HumanMessage(content="oi", id="m1")], "trip_request": {"to": "Sé"}}
+    )
+
+    assert seen["trip_request"] == {"to": "Sé"}
+    assert result["route"] == "proceed"
