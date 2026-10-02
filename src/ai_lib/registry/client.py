@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import math
 import os
 import time
 from collections.abc import Awaitable, Callable, Sequence
@@ -87,7 +88,7 @@ class RegistryClient:
     @staticmethod
     def _report_body(outcome: Outcome, retry_after_seconds: float | None) -> dict[str, Any]:
         body: dict[str, Any] = {"outcome": outcome}
-        if outcome == "rate_limited" and retry_after_seconds:
+        if outcome == "rate_limited" and retry_after_seconds and math.isfinite(retry_after_seconds):
             body["retry_after_seconds"] = max(1, min(int(retry_after_seconds), 86400))
         return body
 
@@ -110,7 +111,10 @@ class RegistryClient:
     ) -> tuple[KeyLease | None, float, bool]:
         status = response.status_code
         if status == 200:
-            return KeyLease.model_validate(response.json()), 0.0, retry_after_used
+            try:
+                return KeyLease.model_validate(response.json()), 0.0, retry_after_used
+            except ValueError as error:
+                raise RegistryError("registry returned an invalid key lease") from error
         if status in (401, 403):
             raise RegistryAuthError("registry rejected the consumer token")
         if status == 404:
