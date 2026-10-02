@@ -67,7 +67,7 @@ O estado do grafo estende `ai_lib.guardrails.GuardrailState`. Serviço com neces
 ## Desenvolvimento
 
 ```bash
-pip install -e ".[dev]"
+uv sync --frozen --extra dev   # ou: pip install -e ".[dev]"
 ruff check . && ruff format --check .
 pytest
 ```
