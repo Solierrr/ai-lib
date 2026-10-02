@@ -66,33 +66,51 @@ def parse_input_classification(
     return InputClassification(category=category, reason=fields["JUSTIFICATIVA"])
 
 
-def parse_output_review(text: str) -> OutputReview:
-    status: str | None = None
-    response_lines: list[str] | None = None
-    for line in _require_text(text, "compliance").splitlines():
-        content = line.strip()
-        upper = content.upper()
-        if not content:
-            if response_lines is not None:
-                response_lines.append("")
-            continue
-        if upper.startswith("STATUS:"):
-            if status is not None or response_lines is not None:
-                raise ValueError("invalid STATUS marker")
-            status = content.split(":", 1)[1].strip().upper()
-        elif upper.startswith("RESPOSTA:"):
-            if status is None or response_lines is not None:
-                raise ValueError("invalid RESPOSTA marker")
-            response_lines = [content.split(":", 1)[1].strip()]
-        elif response_lines is not None:
-            response_lines.append(line)
-        else:
-            raise ValueError("text outside the compliance contract")
+class _ReviewScanner:
+    def __init__(self) -> None:
+        self.status: str | None = None
+        self.response_lines: list[str] | None = None
 
-    revised = "\n".join(response_lines or []).strip()
-    if status not in {"APROVADO", "CORRIGIDO"} or not revised:
+    def feed(self, line: str) -> None:
+        content = line.strip()
+        if not content:
+            self._blank()
+        elif content.upper().startswith("STATUS:"):
+            self._status(content)
+        elif content.upper().startswith("RESPOSTA:"):
+            self._response(content)
+        else:
+            self._text(line)
+
+    def _blank(self) -> None:
+        if self.response_lines is not None:
+            self.response_lines.append("")
+
+    def _status(self, content: str) -> None:
+        if self.status is not None or self.response_lines is not None:
+            raise ValueError("invalid STATUS marker")
+        self.status = content.split(":", 1)[1].strip().upper()
+
+    def _response(self, content: str) -> None:
+        if self.status is None or self.response_lines is not None:
+            raise ValueError("invalid RESPOSTA marker")
+        self.response_lines = [content.split(":", 1)[1].strip()]
+
+    def _text(self, line: str) -> None:
+        if self.response_lines is None:
+            raise ValueError("text outside the compliance contract")
+        self.response_lines.append(line)
+
+
+def parse_output_review(text: str) -> OutputReview:
+    scanner = _ReviewScanner()
+    for line in _require_text(text, "compliance").splitlines():
+        scanner.feed(line)
+
+    revised = "\n".join(scanner.response_lines or []).strip()
+    if scanner.status not in {"APROVADO", "CORRIGIDO"} or not revised:
         raise ValueError("incomplete or invalid compliance response")
-    return OutputReview(revised_response=revised, was_corrected=status == "CORRIGIDO")
+    return OutputReview(revised_response=revised, was_corrected=scanner.status == "CORRIGIDO")
 
 
 def parse_judge_verdict(text: str) -> JudgeVerdict:
