@@ -23,7 +23,7 @@ updates:
       - dependency-name: "*"
         update-types:
           - "version-update:semver-major"
-  - package-ecosystem: "docker"
+  - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"
@@ -34,15 +34,15 @@ updates:
     cooldown:
       default-days: 7
     commit-message:
-      prefix: "build"
+      prefix: "chore"
     groups:
-      docker-images:
+      python-dependencies:
         patterns:
           - "*"
         update-types:
+          - "minor"
           - "patch"
     ignore:
       - dependency-name: "*"
         update-types:
           - "version-update:semver-major"
-          - "version-update:semver-minor"

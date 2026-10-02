@@ -5,7 +5,14 @@
   "pull-request-footer": "\n\n---\nDepois de validar os checks, comente `/release` para publicar.",
   "packages": {
     ".": {
-      "release-type": "simple"
+      "release-type": "simple",
+      "extra-files": [
+        {
+          "type": "toml",
+          "path": "pyproject.toml",
+          "jsonpath": "$.project.version"
+        }
+      ]
     }
   }
 }
