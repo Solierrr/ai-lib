@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "solaria-lib"
-version = "0.1.1"
+version = "0.2.0"
 description = "Shared building blocks for the Solaria AI services"
 readme = "README.md"
 requires-python = ">=3.14"
