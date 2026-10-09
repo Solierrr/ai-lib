@@ -6,16 +6,16 @@
 
 [preencha-me]
 
-## Recursos impactados
+## API pública afetada
 
-[preencha-me] | Sem impacto relevante
+[preencha-me] | Sem alteração na API pública
 
-## Rollback
+## Breaking change
 
-[preencha-me] | Não vem ao caso
+[preencha-me] | Não
 
 ## Como validar
 
-[preencha-me] | Sem validação necessária
+[preencha-me] | Sem validação possível
 
 Closes #
